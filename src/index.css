@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --main: oklch(67.47% 0.1726 259.49);
+  --overlay: rgba(
+    0,
+    0,
+    0,
+    0.8
+  ); /* background color overlay for alert dialogs, modals, etc. */
+
+  --bg: oklch(93.46% 0.0305 255.11);
+  --bw: oklch(
+    100% 0 0
+  ); /* white and secondary black e.g. utility class variant would be: bg-[#fff] dark:bg-[#212121] */
+  --blank: #000; /* blank black and white */
+  --border: #000;
+  --text: #000;
+  --mtext: #000; /* text that is placed on background with main color e.g. text color of default button */
+  --ring: #000;
+  --ring-offset: #fff;
+
+  --border-radius: 5px;
+  --box-shadow-x: 4px;
+  --box-shadow-y: 4px;
+  --reverse-box-shadow-x: -4px;
+  --reverse-box-shadow-y: -4px;
+  --base-font-weight: 500;
+  --heading-font-weight: 700;
+
+  --shadow: var(--box-shadow-x) var(--box-shadow-y) 0px 0px var(--border);
+}
+
+.dark {
+  --bg: #272933;
+  --bw: #212121;
+  --blank: #fff;
+  --border: #000;
+  --text: #e6e6e6;
+  --mtext: #000;
+  --ring: #fff;
+  --ring-offset: #000;
+
+  --shadow: var(--box-shadow-x) var(--box-shadow-y) 0px 0px var(--border);
+}
+
+/* ReactMarkdown styles */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-weight: var(--heading-font-weight);
+  margin: 0.5rem 0;
+}
+
+.markdown-content p {
+  margin: 0.5rem 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.markdown-content li {
+  margin: 0.25rem 0;
+}
+
+.markdown-content strong {
+  font-weight: var(--heading-font-weight);
+}
+
+.markdown-content code {
+  background-color: var(--bw);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  padding: 0.125rem 0.25rem;
+  font-family: monospace;
+  font-size: 0.875em;
+}
+
+.markdown-content pre {
+  background-color: var(--bw);
+  border: 2px solid var(--border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.markdown-content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid var(--main);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+/* Aurora animations */
+@keyframes aurora {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1) translate(0, 0);
+    opacity: 0.3;
+  }
+  33% {
+    transform: rotate(120deg) scale(1.1) translate(20px, -20px);
+    opacity: 0.5;
+  }
+  66% {
+    transform: rotate(240deg) scale(0.9) translate(-20px, 20px);
+    opacity: 0.4;
+  }
+}
+
+/* Subtle grid background for login page */
+.grid-bg {
+  /* gray-300 lines */
+  background-image: linear-gradient(
+      to right,
+      rgba(209, 213, 219, 0.8) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(209, 213, 219, 0.8) 1px, transparent 1px);
+  /* bigger cells */
+  background-size: 96px 96px;
+}
+
+@keyframes aurora-secondary {
+  0%,
+  100% {
+    transform: scale(1) translate(0, 0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.2) translate(30px, -30px);
+    opacity: 0.3;
+  }
+}
