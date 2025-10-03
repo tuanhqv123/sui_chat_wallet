@@ -24,6 +24,7 @@ AI-powered Web3 Wallet Interface for Sui Blockchain với khả năng mint NFT t
 ### 1. Yêu cầu hệ thống
 
 Trước khi bắt đầu, đảm bảo bạn có:
+
 - **Node.js 18+** và **npm**
 - **Python 3.11+**
 - **Sui Wallet** extension trong browser
@@ -88,21 +89,44 @@ sui client publish --gas-budget 100000000
 # Sao chép Package ID từ output và paste vào contract_config.json
 ```
 
-### 5. Cấu hình Environment Variables
+### 5. Lấy API Keys
+
+**OpenRouter Token** (cho AI chat):
+- Vào https://openrouter.ai/
+- Sign up và get API key
+- Chọn model: `x-ai/grok-4-fast:free` (miễn phí)
+
+**HuggingFace Token** (cho image generation):
+- Vào https://huggingface.co/
+- Sign up và create token
+- Model sử dụng: Stable Diffusion
+
+**FreeImage API Key** (cho image upload):
+- Vào https://freeimage.host/
+- Sign up và get API key
+
+### 6. Cấu hình Environment Variables
 
 Tạo file `.env` trong thư mục gốc:
 
 ```env
-# OpenAI API Key (bắt buộc)
-OPENAI_API_KEY=sk-your-openai-api-key-here
+# AI & API Keys (bắt buộc)
+OPEN_ROUTER_TOKEN=sk-or-v1-xxxxxxxxxxxxx  # Từ https://openrouter.ai
+HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxx  # Từ https://huggingface.co
+FREEIMAGE_API_KEY=xxxxxxxxxxxxxxxxxxxxxx  # Từ https://freeimage.host
 
 # Frontend env vars
 VITE_SUI_NETWORK=testnet
 VITE_PACKAGE_ID=0xb0ed4616666009ff326069b936cd15316d740527f5855f437656d4233fbb4d02
 VITE_RPC_URL=https://fullnode.testnet.sui.io:443
+VITE_API_BASE_URL=http://localhost:8000
+
+# Optional
+FRONTEND_URL=http://localhost:5173
+X_TITLE=Sui Chat Wallet
 ```
 
-### 6. Chạy ứng dụng local
+### 7. Chạy ứng dụng local
 
 ```bash
 # Terminal 1: Backend
@@ -114,7 +138,7 @@ npm run dev
 
 Truy cập: `http://localhost:5174`
 
-### 7. Test các tính năng
+### 8. Test các tính năng
 
 1. **Connect Wallet**: Click "Connect Wallet" và chọn Sui Wallet
 2. **Switch to Testnet**: Trong Sui Wallet, đảm bảo đang ở Testnet
@@ -126,34 +150,48 @@ Truy cập: `http://localhost:5174`
 ### **Deploy lên Render (Khuyến nghị)**
 
 **Render** là lựa chọn tốt nhất vì:
+
 - ✅ Hỗ trợ Docker full-stack
 - ✅ Free tier 750 giờ/tháng
 - ✅ Deploy tự động từ GitHub
 - ✅ Đã có sẵn cấu hình
 
 1. **Tạo tài khoản Render**
+
    - Vào [render.com](https://render.com)
    - Sign up với GitHub
 
 2. **Connect Repository**
+
    - Click "New" → "Web Service"
    - Connect GitHub repo: `tuanhqv123/sui_chat_wallet`
    - Branch: `main`
 
 3. **Cấu hình Service**
+
    - **Name**: `sui-chat-wallet`
    - **Runtime**: `Docker`
    - **Region**: `Singapore` (gần nhất)
    - **Build Command**: `docker build -t sui-chat-wallet .`
    - **Start Command**: `docker run -p $PORT:8000 sui-chat-wallet`
 
-4. **Environment Variables**:
+4. **Environment Variables** (set trong Render Dashboard):
+
    ```env
+   # Frontend
    NODE_ENV=production
-   OPENAI_API_KEY=sk-your-openai-key-here
    VITE_SUI_NETWORK=testnet
    VITE_PACKAGE_ID=0xb0ed4616666009ff326069b936cd15316d740527f5855f437656d4233fbb4d02
    VITE_RPC_URL=https://fullnode.testnet.sui.io:443
+
+   # Backend (bắt buộc)
+   OPEN_ROUTER_TOKEN=sk-or-v1-xxxxxxxxxxxxx
+   HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxx
+   FREEIMAGE_API_KEY=xxxxxxxxxxxxxxxxxxxxxx
+
+   # Optional
+   FRONTEND_URL=[auto-set-by-render]
+   X_TITLE=Sui Chat Wallet
    ```
 
 5. **Deploy**
@@ -168,14 +206,30 @@ Truy cập: `http://localhost:5174`
 - **Contract**: `move/sources/nft_mint.move`
 - **Function**: `mint_to_sender(name, description, image_url)`
 
-## 🔗 API Endpoints
+## 🔗 API Endpoints & Services
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check |
-| POST | `/api/chat` | AI chat với blockchain intents |
-| POST | `/api/upload-image` | Upload hình ảnh cho NFT |
-| POST | `/api/generate-image` | Generate AI image |
+### Backend APIs
+| Method | Endpoint              | Description                    | Service Used |
+| ------ | --------------------- | ------------------------------ | ------------ |
+| GET    | `/health`             | Health check                   | - |
+| POST   | `/api/chat`           | AI chat với blockchain intents | OpenRouter (Grok) |
+| POST   | `/api/upload-image`   | Upload hình ảnh cho NFT        | FreeImage API |
+| POST   | `/api/generate-image` | Generate AI image              | HuggingFace |
+
+### External Services Required
+
+1. **OpenRouter** (https://openrouter.ai/)
+   - API: `OPEN_ROUTER_TOKEN`
+   - Model: `x-ai/grok-4-fast:free` (miễn phí)
+   - Usage: AI chat và blockchain intent detection
+
+2. **HuggingFace** (https://huggingface.co/)
+   - API: `HF_TOKEN`
+   - Usage: Stable Diffusion image generation
+
+3. **FreeImage** (https://freeimage.host/)
+   - API: `FREEIMAGE_API_KEY`
+   - Usage: Image upload và hosting cho NFTs
 
 ## 🎯 Cách sử dụng
 
@@ -190,23 +244,28 @@ Truy cập: `http://localhost:5174`
 ## 🐛 Troubleshooting
 
 ### Lỗi "Dependent package not found"
+
 - Đảm bảo wallet đang ở Testnet
 - Kiểm tra Package ID trong `contract_config.json`
 
 ### Lỗi "Insufficient funds"
+
 - Xin thêm SUI từ faucet: `sui client faucet`
 
 ### Lỗi Docker build
+
 - Đảm bảo Docker Desktop đang chạy
 - Clear cache: `docker system prune -a`
 
 ### Lỗi API calls
+
 - Kiểm tra OpenAI API key
 - Kiểm tra CORS settings
 
 ## 📞 Support
 
 Nếu gặp vấn đề:
+
 1. Check browser console (F12 → Console)
 2. Check Network tab cho API calls
 3. Check Sui Wallet extension logs
@@ -217,6 +276,7 @@ Nếu gặp vấn đề:
 ## 🎉 **Tóm tắt**
 
 Dự án **Sui Chat Wallet** là một ứng dụng Web3 hoàn chỉnh cho phép người dùng:
+
 - Chat với AI để thực hiện giao dịch blockchain
 - Mint NFT với hình ảnh từ AI
 - Transfer token một cách an toàn
