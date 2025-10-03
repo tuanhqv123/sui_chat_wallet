@@ -1,41 +1,47 @@
-# Sui Chat Wallet 🤖💰
+# Sui Chat Wallet
 
-Ứng dụng ví tiền điện tử thông minh sử dụng trí tuệ nhân tạo (AI) để thực hiện giao dịch crypto và tạo NFT chỉ bằng ngôn ngữ tự nhiên trên blockchain Sui.
+An intelligent crypto wallet that uses artificial intelligence to execute cryptocurrency transactions and create NFTs using natural language on the Sui blockchain.
 
-## ✨ Tính năng chính
+## Features
 
-### 💬 Giao dịch bằng ngôn ngữ tự nhiên
-- **Chat với AI** để gửi SUI token: "gửi 10 SUI cho địa chỉ 0x123..."
-- **AI hiểu ngữ cảnh** và tự động xử lý giao dịch an toàn
-- **Xác nhận bảo mật** trước khi thực hiện
+### Natural Language Transactions
 
-### 🎨 Tạo NFT bằng AI
-- **Mô tả bằng lời** để tạo NFT: "tạo NFT chú chó con dễ thương"
-- **AI tự động tạo hình ảnh** sử dụng Stable Diffusion
-- **Mint NFT trực tiếp** lên blockchain Sui
+- **Chat with AI** to send SUI tokens: "send 10 SUI to address 0x123..."
+- **AI understands context** and automatically processes secure transactions
+- **Secure confirmation** before execution
 
-### 🔒 Bảo mật và dễ sử dụng
-- **Kết nối ví Sui** an toàn với extension
-- **Theo dõi số dư** real-time
-- **Giao diện hiện đại** với React + TypeScript
+### AI-Powered NFT Creation
 
-## 🚀 Công nghệ sử dụng
+- **Describe in words** to create NFTs: "create NFT of cute puppy"
+- **AI automatically generates images** using Stable Diffusion
+- **Mint NFTs directly** on Sui blockchain
+
+### Security & User-Friendly
+
+- **Connect Sui Wallet** securely with extension
+- **Real-time balance tracking**
+- **Modern interface** with React + TypeScript
+
+## Technology Stack
 
 ### Frontend
+
 - **React 18** + TypeScript + Vite
 - **Tailwind CSS** + shadcn/ui
-- **@mysten/dapp-kit** - tích hợp ví Sui
-- **TanStack Query** - quản lý API
+- **@mysten/dapp-kit** - Sui wallet integration
+- **TanStack Query** - API management
 
 ### Backend
+
 - **FastAPI** + Python
-- **LangGraph** - điều phối AI conversation
-- **OpenRouter** - truy cập AI models (Grok, Gemini)
-- **HuggingFace** - tạo hình ảnh AI
-- **FreeImage** - hosting hình ảnh NFT
+- **LangGraph** - AI conversation orchestration
+- **OpenRouter** - AI models access (Grok, Gemini)
+- **HuggingFace** - AI image generation
+- **FreeImage** - NFT image hosting
 
 ### Blockchain
-- **Sui Testnet** - mạng thử nghiệm
+
+- **Sui Testnet** - test network
 - **Move language** - smart contracts
 - **Sui CLI** - deployment tools
 
@@ -267,49 +273,3 @@ Truy cập: `http://localhost:5174`
    - "show my balance"
 4. **Confirm transactions** trong wallet popup
 
-## 🐛 Troubleshooting
-
-### Lỗi "Dependent package not found"
-
-- Đảm bảo wallet đang ở Testnet
-- Kiểm tra Package ID trong `contract_config.json`
-
-### Lỗi "Insufficient funds"
-
-- Xin thêm SUI từ faucet: `sui client faucet`
-
-### Lỗi Docker build
-
-- Đảm bảo Docker Desktop đang chạy
-- Clear cache: `docker system prune -a`
-
-### Lỗi API calls
-
-- Kiểm tra OpenAI API key
-- Kiểm tra CORS settings
-
-## 📞 Support
-
-Nếu gặp vấn đề:
-
-1. Check browser console (F12 → Console)
-2. Check Network tab cho API calls
-3. Check Sui Wallet extension logs
-4. Check server logs trong Render dashboard
-
----
-
-## 🎉 **Tóm tắt**
-
-Dự án **Sui Chat Wallet** là một ứng dụng Web3 hoàn chỉnh cho phép người dùng:
-
-- Chat với AI để thực hiện giao dịch blockchain
-- Mint NFT với hình ảnh từ AI
-- Transfer token một cách an toàn
-- Quản lý ví và lịch sử giao dịch
-
-**Tech Stack**: React + TypeScript + FastAPI + LangGraph + Sui Testnet
-
-**Deploy**: Render (Docker full-stack) - Dễ nhất và miễn phí!
-
-🚀 **Bắt đầu ngay với hướng dẫn trên!**
