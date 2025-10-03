@@ -38,13 +38,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files (serve frontend)
-static_path = os.getenv("STATIC_FILES_PATH", "./static")
-if os.path.exists(static_path):
-    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
-else:
-    print(f"Warning: Static files path {static_path} not found")
-
 
 class ChatRequest(BaseModel):
     message: str
@@ -439,6 +432,14 @@ async def health_check():
         "version": "1.0.0",
         "timestamp": "2025-01-03T22:00:00Z"
     }
+
+
+# Mount static files (serve frontend) - must be after all API routes
+static_path = os.getenv("STATIC_FILES_PATH", "./static")
+if os.path.exists(static_path):
+    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
+else:
+    print(f"Warning: Static files path {static_path} not found")
 
 
 if __name__ == "__main__":
