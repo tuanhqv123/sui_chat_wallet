@@ -12,6 +12,7 @@ from graphs.transfer import build_transfer_graph
 from graphs.nft import build_nft_graph
 from graphs.base import GraphState
 from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import base64
@@ -36,6 +37,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files (serve frontend)
+static_path = os.getenv("STATIC_FILES_PATH", "./static")
+if os.path.exists(static_path):
+    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
+else:
+    print(f"Warning: Static files path {static_path} not found")
 
 
 class ChatRequest(BaseModel):
