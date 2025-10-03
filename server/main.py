@@ -16,7 +16,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import base64
 import json
-import google.generativeai as genai
 
 
 app = FastAPI(title="Sui Chat Wallet Backend")
