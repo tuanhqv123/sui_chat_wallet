@@ -1,23 +1,43 @@
-# Sui Chat Wallet
+# Sui Chat Wallet 🤖💰
 
-AI-powered Web3 Wallet Interface for Sui Blockchain với khả năng mint NFT thông qua chat AI
+Ứng dụng ví tiền điện tử thông minh sử dụng trí tuệ nhân tạo (AI) để thực hiện giao dịch crypto và tạo NFT chỉ bằng ngôn ngữ tự nhiên trên blockchain Sui.
 
-## Features
+## ✨ Tính năng chính
 
-- 🤖 **AI Chat Interface**: Chat với AI để thực hiện các giao dịch crypto/DeFi
-- 💰 **Multi-token Wallet**: Quản lý SUI và các token khác
-- 🖼️ **NFT Minting**: Tạo NFT với hình ảnh từ AI hoặc upload
-- 💸 **Token Transfer**: Chuyển token giữa các ví
-- 📊 **Transaction History**: Lịch sử giao dịch real-time
-- 🔐 **Secure Integration**: Tích hợp với Sui Wallet extension
+### 💬 Giao dịch bằng ngôn ngữ tự nhiên
+- **Chat với AI** để gửi SUI token: "gửi 10 SUI cho địa chỉ 0x123..."
+- **AI hiểu ngữ cảnh** và tự động xử lý giao dịch an toàn
+- **Xác nhận bảo mật** trước khi thực hiện
 
-## Tech Stack
+### 🎨 Tạo NFT bằng AI
+- **Mô tả bằng lời** để tạo NFT: "tạo NFT chú chó con dễ thương"
+- **AI tự động tạo hình ảnh** sử dụng Stable Diffusion
+- **Mint NFT trực tiếp** lên blockchain Sui
 
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS
-- **Backend**: Python + FastAPI + LangGraph
-- **Blockchain**: Sui Testnet
-- **AI**: OpenAI GPT-4
-- **Database**: In-memory storage (không cần database ngoài)
+### 🔒 Bảo mật và dễ sử dụng
+- **Kết nối ví Sui** an toàn với extension
+- **Theo dõi số dư** real-time
+- **Giao diện hiện đại** với React + TypeScript
+
+## 🚀 Công nghệ sử dụng
+
+### Frontend
+- **React 18** + TypeScript + Vite
+- **Tailwind CSS** + shadcn/ui
+- **@mysten/dapp-kit** - tích hợp ví Sui
+- **TanStack Query** - quản lý API
+
+### Backend
+- **FastAPI** + Python
+- **LangGraph** - điều phối AI conversation
+- **OpenRouter** - truy cập AI models (Grok, Gemini)
+- **HuggingFace** - tạo hình ảnh AI
+- **FreeImage** - hosting hình ảnh NFT
+
+### Blockchain
+- **Sui Testnet** - mạng thử nghiệm
+- **Move language** - smart contracts
+- **Sui CLI** - deployment tools
 
 ## 🚀 Hướng Dẫn Setup Từ Đầu
 
@@ -92,16 +112,19 @@ sui client publish --gas-budget 100000000
 ### 5. Lấy API Keys
 
 **OpenRouter Token** (cho AI chat):
+
 - Vào https://openrouter.ai/
 - Sign up và get API key
 - Chọn model: `x-ai/grok-4-fast:free` (miễn phí)
 
 **HuggingFace Token** (cho image generation):
+
 - Vào https://huggingface.co/
 - Sign up và create token
 - Model sử dụng: Stable Diffusion
 
 **FreeImage API Key** (cho image upload):
+
 - Vào https://freeimage.host/
 - Sign up và get API key
 
@@ -209,21 +232,24 @@ Truy cập: `http://localhost:5174`
 ## 🔗 API Endpoints & Services
 
 ### Backend APIs
-| Method | Endpoint              | Description                    | Service Used |
-| ------ | --------------------- | ------------------------------ | ------------ |
-| GET    | `/health`             | Health check                   | - |
+
+| Method | Endpoint              | Description                    | Service Used      |
+| ------ | --------------------- | ------------------------------ | ----------------- |
+| GET    | `/health`             | Health check                   | -                 |
 | POST   | `/api/chat`           | AI chat với blockchain intents | OpenRouter (Grok) |
-| POST   | `/api/upload-image`   | Upload hình ảnh cho NFT        | FreeImage API |
-| POST   | `/api/generate-image` | Generate AI image              | HuggingFace |
+| POST   | `/api/upload-image`   | Upload hình ảnh cho NFT        | FreeImage API     |
+| POST   | `/api/generate-image` | Generate AI image              | HuggingFace       |
 
 ### External Services Required
 
 1. **OpenRouter** (https://openrouter.ai/)
+
    - API: `OPEN_ROUTER_TOKEN`
    - Model: `x-ai/grok-4-fast:free` (miễn phí)
    - Usage: AI chat và blockchain intent detection
 
 2. **HuggingFace** (https://huggingface.co/)
+
    - API: `HF_TOKEN`
    - Usage: Stable Diffusion image generation
 

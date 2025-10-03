@@ -47,5 +47,5 @@ EXPOSE 8000
 ENV PYTHONPATH=/app
 ENV STATIC_FILES_PATH=/app/static
 
-# Run the application (Render sets PORT environment variable)
-CMD sh -c "uvicorn main:app --host 0.0.0.0 --port $PORT"
+# Run the application (Render sets PORT environment variable, default to 8000 for local)
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"

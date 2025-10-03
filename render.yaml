@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: VITE_API_BASE_URL
-        value: ""  # Will be auto-set by Render
+        value: "" # Will be auto-set by Render
       - key: VITE_SUI_NETWORK
         value: testnet
       - key: VITE_PACKAGE_ID
@@ -19,15 +19,15 @@ services:
 
       # Backend Environment Variables (AI & APIs)
       - key: OPEN_ROUTER_TOKEN
-        sync: false  # Set this in Render dashboard (OpenRouter API key)
+        sync: false # Set this in Render dashboard (OpenRouter API key)
       - key: HF_TOKEN
-        sync: false  # Set this in Render dashboard (HuggingFace token for image generation)
+        sync: false # Set this in Render dashboard (HuggingFace token for image generation)
       - key: FREEIMAGE_API_KEY
-        sync: false  # Set this in Render dashboard (FreeImage API key for image upload)
+        sync: false # Set this in Render dashboard (FreeImage API key for image upload)
 
       # Optional Configuration
       - key: FRONTEND_URL
-        value: ""  # Will be auto-set by Render
+        value: "" # Will be auto-set by Render
       - key: X_TITLE
         value: "Sui Chat Wallet"
     healthCheckPath: /health
