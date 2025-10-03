@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sui-chat-wallet
+    runtime: docker
+    buildCommand: docker build -t sui-chat-wallet .
+    startCommand: docker run -p $PORT:8000 sui-chat-wallet
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_SUI_NETWORK
+        value: testnet
+      - key: VITE_PACKAGE_ID
+        value: 0xb0ed4616666009ff326069b936cd15316d740527f5855f437656d4233fbb4d02
+      - key: VITE_RPC_URL
+        value: https://fullnode.testnet.sui.io:443
+      - key: OPENAI_API_KEY
+        sync: false # Set this in Render dashboard
+      - key: SUPABASE_URL
+        sync: false # Set this in Render dashboard
+      - key: SUPABASE_ANON_KEY
+        sync: false # Set this in Render dashboard
+    healthCheckPath: /health

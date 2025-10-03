@@ -5,7 +5,7 @@ export const API_CONFIG = {
     MODELS: "/api/models",
     CHAT: "/api/chat",
     TRANSFER_EXECUTE: "/api/transfer/execute",
-    NFT_MINT: "/api/nft/mint",
+    NFT_MINT: "/api/mint-nft",
     UPLOAD_IMAGE: "/api/upload/image",
   },
 };

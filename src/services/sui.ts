@@ -67,7 +67,7 @@ class SuiService {
   private network: "mainnet" | "testnet" | "devnet" | "localnet";
 
   constructor(
-    network: "mainnet" | "testnet" | "devnet" | "localnet" = "devnet"
+    network: "mainnet" | "testnet" | "devnet" | "localnet" = "testnet"
   ) {
     this.network = network;
     this.client = new SuiClient({ url: getFullnodeUrl(network) });

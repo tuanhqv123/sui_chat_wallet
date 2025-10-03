@@ -14,14 +14,14 @@ export interface ContractConfig {
 
 // Default configuration - will be updated after deployment
 export const CONTRACT_CONFIG: ContractConfig = {
-  network: process.env.VITE_SUI_NETWORK || 'devnet',
-  packageId: process.env.VITE_PACKAGE_ID || '0x0', // Will be updated after deployment
+  network: process.env.VITE_SUI_NETWORK || "testnet",
+  packageId: process.env.VITE_PACKAGE_ID || "0x0", // Will be updated after deployment
   modules: {
-    walletManager: 'wallet_manager',
-    aiOracle: 'ai_oracle',
-    defiActions: 'defi_actions',
+    walletManager: "wallet_manager",
+    aiOracle: "ai_oracle",
+    defiActions: "defi_actions",
   },
-  rpcUrl: process.env.VITE_RPC_URL || 'https://fullnode.devnet.sui.io:443',
+  rpcUrl: process.env.VITE_RPC_URL || "https://fullnode.devnet.sui.io:443",
 };
 
 // Move function targets
@@ -78,16 +78,16 @@ export const EVENT_TYPES = {
 
 // Common coin types on Sui
 export const COIN_TYPES = {
-  SUI: '0x2::sui::SUI',
+  SUI: "0x2::sui::SUI",
   // Add other coin types as needed
 };
 
 // AI Models supported
 export const AI_MODELS = {
-  GPT_3_5_TURBO: 'gpt-3.5-turbo',
-  GPT_4: 'gpt-4',
-  GPT_4_TURBO: 'gpt-4-turbo-preview',
-  CLAUDE_3: 'claude-3',
+  GPT_3_5_TURBO: "gpt-3.5-turbo",
+  GPT_4: "gpt-4",
+  GPT_4_TURBO: "gpt-4-turbo-preview",
+  CLAUDE_3: "claude-3",
 };
 
 // Security levels for AI operations
@@ -100,15 +100,15 @@ export const SECURITY_LEVELS = {
 
 // Intent types that the AI can process
 export const INTENT_TYPES = {
-  TRANSFER: 'TRANSFER',
-  BALANCE_QUERY: 'BALANCE_QUERY',
-  HISTORY_QUERY: 'HISTORY_QUERY',
-  SWAP: 'SWAP',
-  ADD_LIQUIDITY: 'ADD_LIQUIDITY',
-  REMOVE_LIQUIDITY: 'REMOVE_LIQUIDITY',
-  STAKE: 'STAKE',
-  UNSTAKE: 'UNSTAKE',
-  HARVEST: 'HARVEST',
+  TRANSFER: "TRANSFER",
+  BALANCE_QUERY: "BALANCE_QUERY",
+  HISTORY_QUERY: "HISTORY_QUERY",
+  SWAP: "SWAP",
+  ADD_LIQUIDITY: "ADD_LIQUIDITY",
+  REMOVE_LIQUIDITY: "REMOVE_LIQUIDITY",
+  STAKE: "STAKE",
+  UNSTAKE: "UNSTAKE",
+  HARVEST: "HARVEST",
 };
 
 // Status codes for intents
@@ -162,26 +162,32 @@ export const updateContractConfig = (newConfig: Partial<ContractConfig>) => {
 
   // Update MOVE_CALLS with new package ID
   if (newConfig.packageId) {
-    Object.keys(MOVE_CALLS).forEach(key => {
-      const [, ...parts] = (MOVE_CALLS as any)[key].split('::');
-      (MOVE_CALLS as any)[key] = `${newConfig.packageId}::${parts.join('::')}`;
+    Object.keys(MOVE_CALLS).forEach((key) => {
+      const [, ...parts] = (MOVE_CALLS as any)[key].split("::");
+      (MOVE_CALLS as any)[key] = `${newConfig.packageId}::${parts.join("::")}`;
     });
 
     // Update EVENT_TYPES with new package ID
-    Object.keys(EVENT_TYPES).forEach(key => {
-      const [, ...parts] = (EVENT_TYPES as any)[key].split('::');
-      (EVENT_TYPES as any)[key] = `${newConfig.packageId}::${parts.join('::')}`;
+    Object.keys(EVENT_TYPES).forEach((key) => {
+      const [, ...parts] = (EVENT_TYPES as any)[key].split("::");
+      (EVENT_TYPES as any)[key] = `${newConfig.packageId}::${parts.join("::")}`;
     });
   }
 };
 
 // Utility function to get function target
-export const getFunctionTarget = (module: keyof typeof CONTRACT_CONFIG.modules, functionName: string): string => {
+export const getFunctionTarget = (
+  module: keyof typeof CONTRACT_CONFIG.modules,
+  functionName: string
+): string => {
   return `${CONTRACT_CONFIG.packageId}::${CONTRACT_CONFIG.modules[module]}::${functionName}`;
 };
 
 // Utility function to get event type
-export const getEventType = (module: keyof typeof CONTRACT_CONFIG.modules, eventName: string): string => {
+export const getEventType = (
+  module: keyof typeof CONTRACT_CONFIG.modules,
+  eventName: string
+): string => {
   return `${CONTRACT_CONFIG.packageId}::${CONTRACT_CONFIG.modules[module]}::${eventName}`;
 };
 
@@ -199,7 +205,10 @@ export const isValidSuiAddress = (address: string): boolean => {
 };
 
 // Helper to format amounts
-export const formatSuiAmount = (amount: string | number, decimals: number = 9): string => {
+export const formatSuiAmount = (
+  amount: string | number,
+  decimals: number = 9
+): string => {
   const amountBigInt = BigInt(amount);
   const divisor = BigInt(10 ** decimals);
   const quotient = amountBigInt / divisor;
@@ -209,10 +218,10 @@ export const formatSuiAmount = (amount: string | number, decimals: number = 9): 
     return quotient.toString();
   }
 
-  const remainderStr = remainder.toString().padStart(decimals, '0');
-  const trimmedRemainder = remainderStr.replace(/0+$/, '');
+  const remainderStr = remainder.toString().padStart(decimals, "0");
+  const trimmedRemainder = remainderStr.replace(/0+$/, "");
 
-  if (trimmedRemainder === '') {
+  if (trimmedRemainder === "") {
     return quotient.toString();
   }
 
@@ -223,7 +232,7 @@ export const formatSuiAmount = (amount: string | number, decimals: number = 9): 
 export const parseToMist = (amount: string): string => {
   const numAmount = parseFloat(amount);
   if (isNaN(numAmount) || numAmount <= 0) {
-    throw new Error('Invalid amount');
+    throw new Error("Invalid amount");
   }
   return Math.floor(numAmount * 1_000_000_000).toString();
 };

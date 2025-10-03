@@ -29,7 +29,7 @@ const networks = {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networks} defaultNetwork="devnet">
+      <SuiClientProvider networks={networks} defaultNetwork="testnet">
         <WalletProvider autoConnect storageKey="sui-wallet">
           <App />
         </WalletProvider>

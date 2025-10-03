@@ -73,20 +73,24 @@ export interface ChatRequest {
 }
 
 export interface ImageGenerationRequest {
-  story_prompt: string;
+  story_prompt?: string;
+  prompt?: string;
 }
 
 export interface ImageGenerationResponse {
   success: boolean;
   message?: string;
   image_url?: string;
+  image_base64?: string;
+  prompt?: string;
   prompt_used?: string;
   error?: string;
 }
 
 export interface ChatResponse {
   success: boolean;
-  reply: any; // Can be string or structured object
+  reply?: any; // Can be string or structured object (legacy)
+  response?: any; // Can be string or structured object (new)
   error?: string;
 }
 

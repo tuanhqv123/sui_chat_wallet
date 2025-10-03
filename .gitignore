@@ -24,3 +24,17 @@ dist-ssr
 *.sw?
 server/.env
 .env
+
+# IDE and tools
+.qwen/
+
+# Documentation
+REFACTORING_SUMMARY.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+server/graphs/__pycache__/

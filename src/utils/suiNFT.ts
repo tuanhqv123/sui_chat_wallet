@@ -12,7 +12,7 @@ const CONTRACT_CONFIG = {
     "0xec55390071d122616c22b53fc95bbb6718ed3a7a1f9b3e5251b1c8733029b757",
   moduleName: "nft_mint",
   functionName: "mint_to_sender",
-  network: "devnet" as const,
+  network: "testnet" as const,
 };
 
 export interface NFTMintParams {

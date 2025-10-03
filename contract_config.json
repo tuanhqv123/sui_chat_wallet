@@ -1,10 +1,9 @@
 {
-  "package_id": "0xec55390071d122616c22b53fc95bbb6718ed3a7a1f9b3e5251b1c8733029b757",
-  "network": "devnet",
-  "deployed_at": "2025-01-27T10:30:00.000Z",
-  "contract_address": "0xec55390071d122616c22b53fc95bbb6718ed3a7a1f9b3e5251b1c8733029b757",
+  "package_id": "0xb0ed4616666009ff326069b936cd15316d740527f5855f437656d4233fbb4d02",
+  "network": "testnet",
+  "deployed_at": "2025-09-25T12:30:00.000Z",
+  "contract_address": "0xb0ed4616666009ff326069b936cd15316d740527f5855f437656d4233fbb4d02",
   "module_name": "nft_mint",
-  "nft_type": "0xec55390071d122616c22b53fc95bbb6718ed3a7a1f9b3e5251b1c8733029b757::nft_mint::NFT",
-  "upgrade_cap": "0x7a8054e2d7877d694e3afba8b9653406851850ece76928dca49e040b4a3fbcb7",
-  "test_nft_id": "0x4b2c037d4e87c28d5d4de7ad2d99f755eeae918fe51d62d682a3f351709b45b0"
+  "nft_type": "0xb0ed4616666009ff326069b936cd15316d740527f5855f437656d4233fbb4d02::nft_mint::NFT",
+  "upgrade_cap": "0x648739def8508280a7326fe54d621d6f72fca54242a1b0c972155fdb4ac19220"
 }

@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useCurrentAccount, useCurrentWallet } from "@mysten/dapp-kit";
 import { suiService } from "../services/sui";
-import type {
-  WalletBalance,
-  TokenInfo,
-  TransactionSummary,
-} from "../services/sui";
+import type { TokenInfo, TransactionSummary } from "../services/sui";
 import {
   Wallet,
   Copy,
@@ -28,17 +24,12 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
   const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [transactions, setTransactions] = useState<TransactionSummary[]>([]);
   const [suiBalance, setSuiBalance] = useState<string>("0");
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "tokens" | "history"
-  >("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "tokens" | "history">(
+    "overview"
+  );
 
   const walletAddress = account?.address;
-
-  useEffect(() => {
-    if (walletAddress && connectionStatus === "connected") {
-      loadWalletData();
-    }
-  }, [walletAddress, connectionStatus, loadWalletData]);
+  const walletChains = account?.chains;
 
   const loadWalletData = useCallback(async () => {
     if (!walletAddress) return;
@@ -61,6 +52,12 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
       setLoading(false);
     }
   }, [walletAddress]);
+
+  useEffect(() => {
+    if (walletAddress && connectionStatus === "connected") {
+      loadWalletData();
+    }
+  }, [walletAddress, connectionStatus, loadWalletData]);
 
   const copyAddress = async () => {
     if (walletAddress) {
@@ -129,6 +126,25 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
               >
                 <ExternalLink className="w-4 h-4" />
               </a>
+            </div>
+            {/* Network information */}
+            <div className="mt-2">
+              <span
+                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  walletChains?.[0]?.includes("testnet")
+                    ? "bg-green-100 text-green-800"
+                    : walletChains?.[0]?.includes("devnet")
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
+                Network: {walletChains?.[0] || "unknown"}
+              </span>
+              {walletChains?.[0]?.includes("devnet") && (
+                <p className="text-xs text-yellow-400 mt-1">
+                  ⚠️ Switch to testnet in your wallet to mint NFTs
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -297,7 +313,7 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
                           <p className="font-medium text-white">
                             {formatBalance(
                               token.balance,
-                              token.metadata?.decimals || 9,
+                              token.metadata?.decimals || 9
                             )}
                           </p>
                           <p className="text-gray-400 text-sm">
@@ -338,16 +354,16 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
                               tx.type === "sent"
                                 ? "bg-red-500/20"
                                 : tx.type === "received"
-                                  ? "bg-green-500/20"
-                                  : "bg-gray-500/20"
+                                ? "bg-green-500/20"
+                                : "bg-gray-500/20"
                             }`}
                           >
                             <span className="text-sm">
                               {tx.type === "sent"
                                 ? "↗️"
                                 : tx.type === "received"
-                                  ? "↙️"
-                                  : "🔄"}
+                                ? "↙️"
+                                : "🔄"}
                             </span>
                           </div>
                           <div>
@@ -355,8 +371,8 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
                               {tx.type === "sent"
                                 ? "Sent"
                                 : tx.type === "received"
-                                  ? "Received"
-                                  : "Transaction"}
+                                ? "Received"
+                                : "Transaction"}
                             </p>
                             <p className="text-gray-400 text-sm">
                               {tx.timestamp
@@ -371,15 +387,15 @@ export function WalletDashboard({ onClose }: WalletDashboardProps) {
                               tx.type === "sent"
                                 ? "text-red-400"
                                 : tx.type === "received"
-                                  ? "text-green-400"
-                                  : "text-gray-400"
+                                ? "text-green-400"
+                                : "text-gray-400"
                             }`}
                           >
                             {tx.type === "sent"
                               ? "-"
                               : tx.type === "received"
-                                ? "+"
-                                : ""}
+                              ? "+"
+                              : ""}
                             {tx.amount} SUI
                           </p>
                           <p

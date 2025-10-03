@@ -6,6 +6,11 @@ from typing_extensions import TypedDict, Annotated
 from typing import Dict
 from langgraph.graph import StateGraph, START
 from langgraph.graph.message import add_messages
+
+# Import graph builders
+from graphs.transfer import build_transfer_graph
+from graphs.nft import build_nft_graph
+from graphs.base import GraphState
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,7 +27,12 @@ session_storage: Dict[str, dict] = {}
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "*",  # Allow all origins for deployment (you may want to restrict this)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,54 +41,23 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str
-    model: str = "x-ai/grok-4-fast:free"
-    wallet_address: str = ""
-    current_balance: str = "0"  # Current wallet balance for validation
-    mode: str = "transfer"  # "nft" or "transfer"
-
-class TransferRecipient(BaseModel):
-    to_address: str
-    amount: float
-
-class TransferIntent(BaseModel):
-    intent: str  # "transfer"
-    from_address: str
-    to_address: str = ""  # For single recipient (backward compatibility)
-    amount: float = 0.0  # For single recipient (backward compatibility)
-    recipients: list[TransferRecipient] = []  # For multiple recipients
-    token_type: str = "SUI"
-    network: str = "devnet"
-    requires_confirmation: bool = True
-
-class NFTMintIntent(BaseModel):
-    intent: str  # "mint_nft"
-    owner_address: str
-    name: str
-    description: str
-    image_url: str
-    attributes: dict = {}
-    network: str = "devnet"
-    requires_confirmation: bool = True
-
-class StructuredResponse(BaseModel):
-    type: str  # "chat" | "transfer_intent" | "nft_mint_intent" | "confirmation_required"
-    message: str
-    transfer_intent: TransferIntent | None = None
-    nft_mint_intent: NFTMintIntent | None = None
+    model: str
+    wallet_address: str
+    current_balance: str
+    mode: str = "transfer"
 
 
 class ModelInfo(BaseModel):
     id: str
     name: str
 
-class NFTMintRequest(BaseModel):
-    story_prompt: str
-    wallet_address: str
-    name: str = ""
-    description: str = ""
 
 class ImageGenerationRequest(BaseModel):
-    story_prompt: str
+    story_prompt: str = None
+    prompt: str = None
+    
+    def get_prompt(self) -> str:
+        return self.story_prompt or self.prompt or ""
 
 
 def build_client() -> OpenAI:
@@ -122,443 +101,6 @@ def direct_test(client: OpenAI):
         print("[Direct]", completion if isinstance(completion, str) else str(completion))
 
 
-class GraphState(TypedDict):
-    messages: Annotated[list, add_messages]
-    nft_info: dict  # Store NFT information during creation flow
-    current_step: str  # Track current step in NFT creation
-    wallet_address: str  # User's wallet address
-    current_balance: str  # Current wallet balance
-
-
-def build_graph(client: OpenAI):
-    model = os.getenv("OPENAI_MODEL", "x-ai/grok-4-fast:free")
-    referer = os.getenv("FRONTEND_URL", "http://localhost:5173")
-    title = os.getenv("X_TITLE", "Sui Chat Wallet")
-
-    graph = StateGraph(GraphState)
-
-    def route_decision(state: GraphState) -> str:
-        """Route messages based on mode and current step"""
-        print(f"🚦 ROUTE_DECISION: Analyzing message routing")
-        
-        last = state["messages"][-1]
-        print(f"🚦 Last message: {last}")
-        
-        # Handle both string messages and dict messages
-        if isinstance(last, dict):
-            user_text = last.get("content", str(last))
-        else:
-            user_text = str(last)
-        
-        # Extract actual text content from LangGraph messages
-        if hasattr(last, 'content'):
-            user_text = last.content
-        elif isinstance(last, dict):
-            user_text = last.get("content", str(last))
-        else:
-            user_text = str(last)
-        
-        current_step = state.get("current_step", "initial")
-        mode = state.get("mode", "transfer")
-        print(f"🚦 User text: {user_text}")
-        print(f"🚦 Current step: {current_step}")
-        print(f"🚦 Mode: {mode}")
-        
-        # Route based on mode
-        if mode == "nft":
-            # If already in NFT creation flow, continue
-            if current_step.startswith("nft_") or current_step != "initial":
-                print(f"🚦 Routing to: nft_collect_info (NFT flow)")
-                return "nft_collect_info"
-            else:
-                print(f"🚦 Routing to: nft_collect_info (NFT mode)")
-                return "nft_collect_info"
-        elif mode == "transfer":
-            # If already in transfer flow, continue
-            if current_step.startswith("transfer_") or current_step != "initial":
-                print(f"🚦 Routing to: transfer_handler (Transfer flow)")
-                return "transfer_handler"
-            else:
-                print(f"🚦 Routing to: transfer_handler (Transfer mode)")
-                return "transfer_handler"
-        
-        print(f"🚦 Routing to: llm (Default)")
-        return "llm"
-
-    def llm_node(state: GraphState) -> GraphState:
-        last = state["messages"][-1]
-        # Handle both string messages and dict messages
-        if isinstance(last, dict):
-            user_text = last.get("content", str(last))
-        else:
-            user_text = str(last)
-        
-        # Handle "show confirm transactions" request
-        if user_text.lower().strip() == "show confirm transactions":
-            # Look for pending transfer in session messages
-            messages = state.get("messages", [])
-            for msg in reversed(messages):
-                if isinstance(msg, dict) and msg.get("role") == "assistant":
-                    content = msg.get("content", "")
-                    try:
-                        parsed = json.loads(content)
-                        if parsed.get("type") == "transfer_intent":
-                            # Return the transfer intent for confirmation
-                            return {"messages": [{"role": "assistant", "content": content}]}
-                    except json.JSONDecodeError:
-                        continue
-            
-            # No pending transfer found
-            return {"messages": [{"role": "assistant", "content": "No pending transfer intent found. Please provide transfer details (e.g., \"transfer 1 SUI to 0x...\") to extract and confirm."}]}
-        
-        # System prompt for Sui Chat Wallet
-        system_prompt = """You are Sui Chat Wallet AI Assistant. You help users with:
-
-1. **Sui Blockchain Operations**: Transfer tokens, check balances, view transaction history
-2. **NFT Creation**: Help users create NFTs with AI-generated images
-3. **Wallet Management**: Connect wallets, view assets, manage Sui blockchain interactions
-
-**Important Guidelines:**
-- You CAN help with cryptocurrency transfers on Sui blockchain - this is your core function
-- You CAN assist with financial transactions within the Sui ecosystem
-- Always provide helpful, accurate information about Sui blockchain operations
-- When users request transfers, help them complete the transactions safely
-- For NFT creation, guide users through the process step by step
-
-**Transfer Operations:**
-- Help users transfer SUI tokens to other addresses
-- Validate addresses and amounts
-- Provide transaction confirmations
-- Estimate gas fees
-
-**NFT Operations:**
-- Help users create NFTs with custom images
-- Generate images from text descriptions
-- Guide through minting process
-
-You are here to help users succeed with their Sui blockchain operations. Be helpful and supportive."""
-        
-        resp = client.chat.completions.create(
-            extra_headers={"HTTP-Referer": referer, "X-Title": title},
-            extra_body={},
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_text}
-            ],
-            temperature=0.2,
-        )
-        content = ""
-        try:
-            content = resp.choices[0].message.content
-        except Exception:
-            content = resp if isinstance(resp, str) else str(resp)
-        return {"messages": [content]}
-
-    def nft_collect_info_node(state: GraphState) -> GraphState:
-        """Collect NFT information step by step"""
-        last = state["messages"][-1]
-        # Handle both string messages and dict messages
-        if isinstance(last, dict):
-            user_text = last.get("content", str(last))
-        else:
-            user_text = str(last)
-        nft_info = state.get("nft_info", {})
-        current_step = state.get("current_step", "nft_start")
-        
-        # Enhanced system prompt for NFT information collection
-        nft_system_prompt = f"""You are collecting NFT creation information. Current step: {current_step}
-        
-        NFT Information collected so far: {nft_info}
-        
-        You need to collect:
-        1. Story/Description (what the NFT should represent)
-        2. NFT Name (short, catchy name)
-        3. Collection Name (optional, defaults to user's choice)
-        4. Total Supply (how many NFTs in this collection, user decides)
-        5. Description (detailed description of the NFT)
-        
-        Current step: {current_step}
-        
-        If information is missing, ask for the next piece of information and return:
-        {{
-            "type": "nft_collect_info",
-            "message": "your_question_here",
-            "next_step": "nft_next_step_name",
-            "collected_info": {nft_info}
-        }}
-        
-        If all information is complete, return:
-        {{
-            "type": "nft_creation_intent",
-            "message": "Perfect! I have all the information needed. Let me generate an image based on your story and then we can mint your NFT.",
-            "nft_creation_intent": {{
-                "intent": "create_nft",
-                "story_prompt": "{nft_info.get('story', '')}",
-                "name": "{nft_info.get('name', '')}",
-                "collection_name": "{nft_info.get('collection_name', '')}",
-                "total_supply": {nft_info.get('total_supply', 1)},
-                "description": "{nft_info.get('description', '')}",
-                "network": "devnet",
-                "requires_image_generation": true
-            }}
-        }}
-        
-        Always respond in JSON format."""
-        
-        resp = client.chat.completions.create(
-            extra_headers={"HTTP-Referer": referer, "X-Title": title},
-            extra_body={},
-            model=model,
-            messages=[
-                {"role": "system", "content": nft_system_prompt},
-                {"role": "user", "content": user_text}
-            ],
-            temperature=0.2,
-        )
-        
-        content = ""
-        try:
-            content = resp.choices[0].message.content
-        except Exception:
-            content = resp if isinstance(resp, str) else str(resp)
-        
-        # Try to parse the response as JSON to update state
-        try:
-            parsed_response = json.loads(content)
-            if parsed_response.get("type") == "nft_collect_info":
-                # Update nft_info with collected information
-                collected_info = parsed_response.get("collected_info", {})
-                next_step = parsed_response.get("next_step", current_step)
-                
-                # Smart extraction of information from user message based on current step
-                if current_step == "story" and not collected_info.get("story"):
-                    collected_info["story"] = user_text
-                elif current_step == "name" and not collected_info.get("name"):
-                    collected_info["name"] = user_text
-                elif current_step == "collection_name" and not collected_info.get("collection_name"):
-                    collected_info["collection_name"] = user_text
-                elif current_step == "total_supply" and not collected_info.get("total_supply"):
-                    # Extract number from user message
-                    import re
-                    numbers = re.findall(r'\d+', user_text)
-                    if numbers:
-                        collected_info["total_supply"] = int(numbers[0])
-                    else:
-                        collected_info["total_supply"] = 1
-                elif current_step == "description" and not collected_info.get("description"):
-                    collected_info["description"] = user_text
-                
-                # Merge collected info with existing nft_info
-                updated_nft_info = {**nft_info, **collected_info}
-                
-                return {
-                    "messages": [content],
-                    "nft_info": updated_nft_info,
-                    "current_step": next_step
-                }
-            elif parsed_response.get("type") == "nft_creation_intent":
-                return {
-                    "messages": [content],
-                    "nft_info": nft_info,
-                    "current_step": "nft_creation_complete"
-                }
-        except json.JSONDecodeError:
-            pass
-        
-        return {"messages": [content]}
-
-    def transfer_handler_node(state: GraphState) -> GraphState:
-        """Handle transfer intent and return structured response"""
-        print(f"🔄 TRANSFER_HANDLER_NODE: Processing transfer request")
-        print(f"🔄 Current state: {state}")
-        print(f"🔄 State keys: {list(state.keys())}")
-        print(f"🔄 Current balance from state: {state.get('current_balance', 'NOT_FOUND')}")
-        
-        try:
-            last = state["messages"][-1]
-            print(f"🔄 Last message: {last}")
-            
-            # Handle both string messages and dict messages
-            if isinstance(last, dict):
-                user_text = last.get("content", str(last))
-            else:
-                user_text = str(last)
-            
-            print(f"🔄 Extracted user text: {user_text}")
-            
-            # System prompt for transfer handling
-            transfer_system_prompt = """You are a Sui blockchain transfer assistant. When users request transfers, analyze their message and return a JSON response with transfer intent.
-
-Extract transfer information from user messages like:
-- "chuyển 1 SUI tới 0x..."
-- "transfer 2 tokens to address..."
-- "send 0.5 sui to..."
-
-IMPORTANT: Do NOT include current_balance or after_transaction_balance fields in your response. Only include the fields shown below.
-
-Return JSON format:
-{
-  "type": "transfer_intent",
-  "transfer_intent": {
-    "intent": "transfer",
-    "from_address": "[user_wallet_address]",
-    "to_address": "[extracted_address]",
-    "amount": [extracted_amount],
-    "token_type": "SUI",
-    "network": "devnet",
-    "requires_confirmation": true
-  },
-  "message": "Transfer information extracted. Please type "show confirm transactions" to confirm details."
-}
-
-If multiple recipients, use:
-{
-  "type": "transfer_intent", 
-  "transfer_intent": {
-    "intent": "transfer",
-    "from_address": "[user_wallet_address]",
-    "recipients": [
-      {"to_address": "0x...", "amount": 1.0},
-      {"to_address": "0x...", "amount": 2.0}
-    ],
-    "token_type": "SUI",
-    "network": "devnet", 
-    "requires_confirmation": true
-  },
-  "message": "Multiple transfer recipients detected. Please type "show confirm transactions" to confirm details."
-}
-
-If information is missing, ask for clarification instead of proceeding."""
-            
-            print(f"🔄 Calling OpenAI API for transfer analysis...")
-            resp = client.chat.completions.create(
-                extra_headers={"HTTP-Referer": referer, "X-Title": title},
-                extra_body={},
-                model=model,
-                messages=[
-                    {"role": "system", "content": transfer_system_prompt},
-                    {"role": "user", "content": user_text}
-                ],
-                temperature=0.2,
-            )
-            
-            content = ""
-            try:
-                content = resp.choices[0].message.content
-            except Exception:
-                content = resp if isinstance(resp, str) else str(resp)
-            
-            print(f"🔄 OpenAI response: {content}")
-            
-            # Try to parse JSON response
-            try:
-                response_data = json.loads(content)
-                print(f"🔄 Parsed JSON response: {response_data}")
-                
-                # Validate transfer intent
-                if response_data.get("type") == "transfer_intent":
-                    transfer_intent = response_data.get("transfer_intent", {})
-                    
-                    # 1. Calculate total amount from recipients
-                    total_amount = 0
-                    if "recipients" in transfer_intent:
-                        recipients = transfer_intent.get("recipients", [])
-                        total_amount = sum(float(r.get("amount", 0)) for r in recipients)
-                        print(f"🔄 Total amount from {len(recipients)} recipients: {total_amount}")
-                    else:
-                        total_amount = float(transfer_intent.get("amount", 0))
-                        print(f"🔄 Single recipient amount: {total_amount}")
-                    
-                    # 2. Validate wallet addresses after AI response
-                    invalid_addresses = []
-                    if "recipients" in transfer_intent:
-                        for i, recipient in enumerate(transfer_intent.get("recipients", [])):
-                            address = recipient.get("to_address", "")
-                            if not address.startswith("0x") or len(address) < 10:
-                                invalid_addresses.append(f"Recipient {i+1}: {address}")
-                    else:
-                        address = transfer_intent.get("to_address", "")
-                        if not address.startswith("0x") or len(address) < 10:
-                            invalid_addresses.append(f"Address: {address}")
-                    
-                    # 3. Check address validation - return error if invalid
-                    if invalid_addresses:
-                        error_response = {
-                            "type": "transfer_error",
-                            "error": "invalid_address",
-                            "message": f"Invalid wallet addresses: {', '.join(invalid_addresses)}",
-                            "invalid_addresses": invalid_addresses
-                        }
-                        print(f"🔄 Address validation failed: {error_response}")
-                        return {"messages": [{"role": "assistant", "content": json.dumps(error_response)}]}
-                    
-                    # 4. Address validation passed - return original AI response without balance fields
-                    print(f"🔄 Address validation passed!")
-                    
-                    # Get wallet address from state
-                    wallet_address = state.get("wallet_address", "[user_wallet_address]")
-                    print(f"🔄 Wallet address from state: {wallet_address}")
-                    
-                    # Remove balance fields from response
-                    if "recipients" in transfer_intent:
-                        response_data = {
-                            "type": "transfer_intent",
-                            "transfer_intent": {
-                                "intent": "transfer",
-                                "from_address": wallet_address,
-                                "recipients": transfer_intent.get("recipients", []),
-                                "token_type": "SUI",
-                                "network": "devnet",
-                                "requires_confirmation": True
-                            },
-                            "message": "Multiple transfer recipients detected. Please type \"show confirm transactions\" to confirm details."
-                        }
-                    else:
-                        response_data = {
-                            "type": "transfer_intent",
-                            "transfer_intent": {
-                                "intent": "transfer",
-                                "from_address": wallet_address,
-                                "to_address": transfer_intent.get("to_address", ""),
-                                "amount": transfer_intent.get("amount", 0),
-                                "token_type": "SUI",
-                                "network": "devnet",
-                                "requires_confirmation": True
-                            },
-                            "message": "Transfer information extracted. Please type \"show confirm transactions\" to confirm details."
-                        }
-                
-                # Return as LangGraph compatible message
-                return {"messages": [{"role": "assistant", "content": json.dumps(response_data)}]}
-            except json.JSONDecodeError:
-                print(f"🔄 JSON parse failed, returning as chat message")
-                # If not JSON, return as regular message
-                return {"messages": [{"role": "assistant", "content": content}]}
-        except Exception as e:
-            print(f"❌ Error in transfer_handler_node: {e}")
-            import traceback
-            traceback.print_exc()
-            return {"messages": [{"role": "assistant", "content": f"Error processing transfer request: {str(e)}"}]}
-
-
-    graph.add_node("llm", llm_node)
-    graph.add_node("nft_collect_info", nft_collect_info_node)
-    graph.add_node("transfer_handler", transfer_handler_node)
-    
-    graph.add_conditional_edges(
-        START,
-        route_decision,
-        {
-            "nft_collect_info": "nft_collect_info",
-            "transfer_handler": "transfer_handler",
-            "llm": "llm"
-        }
-    )
-    
-    return graph.compile()
-
-
 @app.get("/api/models")
 def get_models():
     models = [
@@ -575,7 +117,8 @@ def generate_image(request: ImageGenerationRequest):
         client = build_huggingface_client()
         
         # Enhanced prompt for better image generation
-        enhanced_prompt = f"""Create a detailed, high-quality digital artwork based on this story: {request.story_prompt}
+        prompt_text = request.get_prompt()
+        enhanced_prompt = f"""Create a detailed, high-quality digital artwork based on this story: {prompt_text}
         
         Requirements:
         - High resolution, detailed artwork
@@ -585,37 +128,123 @@ def generate_image(request: ImageGenerationRequest):
         - No text or watermarks
         """
         
-        # Generate image using Hugging Face Stable Diffusion XL
+        # Generate image using Hugging Face Stable Diffusion XL with fixed parameters
         image = client.text_to_image(
             enhanced_prompt,
-            model="stabilityai/stable-diffusion-xl-base-1.0"
+            model="stabilityai/stable-diffusion-xl-base-1.0",
+            height=512,
+            width=512,
+            num_inference_steps=20,
+            guidance_scale=7.5
         )
         
         # Convert PIL Image to base64 for transmission
-        import base64
-        from io import BytesIO
+        import io
+        from PIL import Image
         
-        # Convert PIL Image to bytes
-        buffer = BytesIO()
-        image.save(buffer, format='PNG')
-        image_bytes = buffer.getvalue()
+        # Ensure image is in RGB mode
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
         
-        # Encode to base64
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-        data_url = f"data:image/png;base64,{base64_image}"
+        # Image is already 512x512, no need to resize
+        # Keep the fixed size to avoid transaction size limit
+        
+        # Convert to base64 with lower quality to reduce size for blockchain
+        buffer = io.BytesIO()
+        image.save(buffer, format='JPEG', quality=60, optimize=True)
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         
         return {
             "success": True,
-            "message": "Image generated successfully with Stable Diffusion 3.5 Large",
-            "image_url": data_url,
-            "prompt_used": enhanced_prompt
+            "image_url": f"data:image/jpeg;base64,{image_base64}",
+            "image_base64": image_base64,
+            "prompt": enhanced_prompt
         }
         
     except Exception as e:
+        print(f"❌ Image generation error: {str(e)}")
         return {
             "success": False,
             "error": f"Failed to generate image: {str(e)}"
         }
+
+
+@app.post("/api/upload-image")
+def upload_image_to_host(request: dict):
+    """Upload base64 image to freeimage.host and return public URL"""
+    try:
+        import requests
+        
+        # Get image data from request
+        image_base64 = request.get('image_base64', '')
+        if not image_base64:
+            return {
+                "success": False,
+                "error": "No image data provided"
+            }
+        
+        # Remove data URL prefix if present
+        clean_base64 = image_base64.replace('data:image/jpeg;base64,', '')
+        clean_base64 = clean_base64.replace('data:image/png;base64,', '')
+        
+        # Get API key from environment
+        api_key = os.getenv("FREEIMAGE_API_KEY")
+        if not api_key:
+            return {
+                "success": False,
+                "error": "FREEIMAGE_API_KEY not configured"
+            }
+        
+        # Prepare form data
+        form_data = {
+            'key': api_key,
+            'action': 'upload',
+            'source': clean_base64,
+            'format': 'json'
+        }
+        
+        # Upload to freeimage.host
+        response = requests.post('https://freeimage.host/api/1/upload', data=form_data)
+        
+        if response.status_code != 200:
+            return {
+                "success": False,
+                "error": f"HTTP {response.status_code}: {response.text}"
+            }
+        
+        data = response.json()
+        
+        # Check if upload was successful
+        if data.get('status_code') != 200:
+            error_msg = data.get('error', {}).get('message', 'Upload failed')
+            return {
+                "success": False,
+                "error": error_msg
+            }
+        
+        if not data.get('image', {}).get('url'):
+            return {
+                "success": False,
+                "error": "No image URL returned from response"
+            }
+        
+        image_url = data['image']['url']
+        print(f"✅ Image uploaded successfully: {image_url}")
+        
+        return {
+            "success": True,
+            "image_url": image_url,
+            "display_url": data['image'].get('display_url', image_url)
+        }
+        
+    except Exception as e:
+        print(f"❌ Image upload error: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Failed to upload image: {str(e)}"
+        }
+
 
 @app.post("/api/chat")
 def chat(request: ChatRequest):
@@ -623,18 +252,23 @@ def chat(request: ChatRequest):
     print(f"💬 Message: {request.message}")
     print(f"💬 Model: {request.model}")
     print(f"💬 Wallet: {request.wallet_address}")
+    print(f"💬 Balance: {request.current_balance}")
+    print(f"💬 Mode: {request.mode}")
     
-    client = build_client()
+    try:
+        client = build_client()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
     
-    # Create or get session (use wallet address as session key for simplicity)
-    session_id = request.wallet_address or "anonymous"
-    print(f"💬 Session ID: {session_id}")
-    
+    # Create or update session
+    session_id = f"{request.wallet_address}_{request.mode}"
     if session_id not in session_storage:
         session_storage[session_id] = {
             "messages": [],
             "nft_info": {},
             "current_step": "initial",
+            "mode": request.mode,
+            "wallet_address": request.wallet_address,
             "current_balance": request.current_balance
         }
         print(f"💬 Created new session for {session_id} with balance: {request.current_balance}")
@@ -673,9 +307,12 @@ def chat(request: ChatRequest):
     session["messages"].append({"role": "user", "content": request.message})
     print(f"💬 Added user message to session")
     
-    # Build and run graph with session state
-    print(f"💬 Building LangGraph...")
-    graph = build_graph(client)
+    # Build and run graph with session state based on mode
+    print(f"💬 Building LangGraph for mode: {request.mode}")
+    if request.mode == "nft":
+        graph = build_nft_graph()
+    else:
+        graph = build_transfer_graph()
     
     graph_input = {
         "messages": session["messages"],
@@ -685,120 +322,55 @@ def chat(request: ChatRequest):
         "current_balance": request.current_balance,
         "wallet_address": request.wallet_address
     }
+    
     print(f"💬 Graph input: {graph_input}")
     
-    print(f"💬 Invoking LangGraph...")
-    result = graph.invoke(graph_input)
-    print(f"💬 Graph result: {result}")
-    
-    # Update session state
-    session["messages"] = result.get("messages", session["messages"])
-    session["nft_info"] = result.get("nft_info", session.get("nft_info", {}))
-    session["current_step"] = result.get("current_step", session.get("current_step", "initial"))
-    print(f"💬 Updated session: {session}")
-    
-    # Get the last message
-    messages = result.get("messages", [])
-    if not messages:
-        print(f"💬 No messages in result, returning error")
-        return {"success": False, "error": "No response generated"}
-    
-    last_message = messages[-1]
-    
-    # Try to parse as JSON for structured responses
+    # Run the graph
     try:
-        if isinstance(last_message, str):
-            parsed_response = json.loads(last_message)
-            return {"success": True, "reply": parsed_response}
-        else:
-            # Handle HumanMessage objects - extract content attribute
-            if hasattr(last_message, 'content'):
-                message_content = last_message.content
+        result = graph.invoke(graph_input)
+        print(f"💬 Graph result: {result}")
+        
+        # Update session with new state
+        if "messages" in result:
+            session["messages"] = result["messages"]
+        if "nft_info" in result:
+            session["nft_info"] = result["nft_info"]
+        if "current_step" in result:
+            session["current_step"] = result["current_step"]
+        
+        # Get the latest message
+        messages = result.get("messages", [])
+        if messages:
+            latest_message = messages[-1]
+            if hasattr(latest_message, 'content'):
+                content = latest_message.content
+                
+                # Check if content is JSON (structured response)
+                try:
+                    import json
+                    parsed_content = json.loads(content)
+                    if isinstance(parsed_content, dict) and "type" in parsed_content:
+                        print(f"💬 Structured response detected: {parsed_content['type']}")
+                        return {"success": True, "response": parsed_content}
+                except (json.JSONDecodeError, TypeError):
+                    # Not JSON, treat as regular string
+                    pass
+                    
+            elif isinstance(latest_message, dict):
+                content = latest_message.get("content", "")
             else:
-                message_content = str(last_message)
-            
-            # Try to parse as JSON
-            parsed_response = json.loads(message_content)
-            return {"success": True, "reply": parsed_response}
-    except json.JSONDecodeError:
-        # Fallback to regular chat message
-        if hasattr(last_message, 'content'):
-            message_content = last_message.content
+                content = str(latest_message)
         else:
-            message_content = str(last_message)
-        return {"success": True, "reply": {"type": "chat", "message": message_content}}
-@app.post("/api/transfer/execute")
-def execute_transfer(transfer_intent: TransferIntent):
-    """Execute transfer transaction using Sui blockchain"""
-    try:
-        # For now, return a structured response indicating that the transaction
-        # should be executed on the frontend using the wallet
-        # The frontend will handle the actual transaction signing and execution
+            content = "No response generated"
         
-        # Handle multiple recipients
-        if transfer_intent.recipients:
-            total_amount = sum(r.amount for r in transfer_intent.recipients)
-            message = f"Ready to transfer to {len(transfer_intent.recipients)} recipients. Total: {total_amount} {transfer_intent.token_type}"
-        else:
-            # Single recipient (backward compatibility)
-            message = f"Ready to transfer {transfer_intent.amount} {transfer_intent.token_type} to {transfer_intent.to_address}"
+        print(f"💬 Final response: {content}")
+        return {"success": True, "response": content}
         
-        return {
-            "success": True,
-            "requires_wallet_signature": True,
-            "transfer_intent": transfer_intent.model_dump(),
-            "message": f"{message}. Please confirm in your wallet to complete the transaction."
-        }
-            
     except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-@app.post("/api/nft/mint")
-def mint_nft(nft_intent: NFTMintIntent):
-    """Execute NFT minting using real Sui blockchain"""
-    try:
-        # Load contract configuration
-        import json
-        import os
-        from pathlib import Path
-        
-        config_path = Path(__file__).parent.parent / "contract_config.json"
-        if not config_path.exists():
-            return {"success": False, "error": "Contract not deployed. Please deploy the Move contract first."}
-        
-        with open(config_path, 'r') as f:
-            contract_config = json.load(f)
-        
-        package_id = contract_config["package_id"]
-        
-        # Log the minting attempt for debugging
-        print(f"🔨 Real NFT Minting Attempt:")
-        print(f"   Name: {nft_intent.name}")
-        print(f"   Owner: {nft_intent.owner_address}")
-        print(f"   Network: {nft_intent.network}")
-        print(f"   Package ID: {package_id}")
-        
-        # For now, we'll return a success response indicating that the NFT
-        # should be minted by the frontend using the Sui SDK
-        # In a production environment, you would:
-        # 1. Use Sui SDK to build transaction
-        # 2. Handle wallet signing (this should be done on frontend)
-        # 3. Execute transaction and return real results
-        
-        return {
-            "success": True,
-            "message": f"NFT '{nft_intent.name}' ready for minting! Please use the frontend to complete the transaction.",
-            "package_id": package_id,
-            "function_name": "mint_to_sender",
-            "module_name": "nft_mint",
-            "nft_type": contract_config["nft_type"],
-            "instructions": "Use Sui SDK on frontend to call mint_to_sender function with the provided package ID"
-        }
-            
-    except Exception as e:
-        print(f"❌ NFT minting error: {str(e)}")
-        return {"success": False, "error": str(e)}
+        print(f"❌ Graph execution error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": f"Graph execution failed: {str(e)}"}
 
 
 @app.post("/api/upload/image")
@@ -836,11 +408,30 @@ def main():
     client = build_client()
     direct_test(client)
 
-    test_graph = build_graph(client)
-    result = test_graph.invoke({"messages": ["Give me a one-sentence Vietnamese answer: ý nghĩa của cuộc sống là gì?"]})
+    # Test transfer graph
+    test_transfer_graph = build_transfer_graph()
+    result = test_transfer_graph.invoke({"messages": ["Give me a one-sentence Vietnamese answer: ý nghĩa của cuộc sống là gì?"]})
     messages = result.get("messages", [])
     reply = messages[-1] if messages else ""
-    print("[LangGraph]", reply)
+    print("[Transfer Graph]", reply)
+    
+    # Test NFT graph
+    test_nft_graph = build_nft_graph()
+    result = test_nft_graph.invoke({"messages": ["Give me a one-sentence Vietnamese answer: ý nghĩa của cuộc sống là gì?"]})
+    messages = result.get("messages", [])
+    reply = messages[-1] if messages else ""
+    print("[NFT Graph]", reply)
+
+
+# Health check endpoint for deployment monitoring
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "service": "sui-chat-wallet-backend",
+        "version": "1.0.0",
+        "timestamp": "2025-01-03T22:00:00Z"
+    }
 
 
 if __name__ == "__main__":

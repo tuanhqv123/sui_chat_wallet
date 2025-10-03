@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useCurrentWallet, useCurrentAccount } from "@mysten/dapp-kit";
-import { Sidebar } from "./components/Sidebar";
 import { ChatInterface } from "./components/ChatInterface";
 import { WalletConnect } from "./components/WalletConnect";
 import { WalletDashboard } from "./components/WalletDashboard";
@@ -72,20 +71,12 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-bg text-main-foreground prevent-scroll">
-      <Sidebar
-        currentSession={currentSession}
-        onSessionChange={setCurrentSession}
-        onShowDashboard={() => setShowDashboard(true)}
+    <div className="h-screen w-screen bg-bg text-main-foreground prevent-scroll">
+      <ChatInterface
+        sessionId={currentSession}
+        currentMode={currentMode}
+        onModeChange={setCurrentMode}
       />
-
-      <main className="flex-1 relative z-10 overflow-hidden">
-        <ChatInterface
-          sessionId={currentSession}
-          currentMode={currentMode}
-          onModeChange={setCurrentMode}
-        />
-      </main>
     </div>
   );
 }

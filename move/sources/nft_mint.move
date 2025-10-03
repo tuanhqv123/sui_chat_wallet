@@ -2,7 +2,6 @@ module sui_chat_wallet::nft_mint {
     use std::string::{Self, String};
     use sui::url::{Self, Url};
     use sui::event;
-    use sui::table::{Self, Table};
 
     /// NFT object representing a minted NFT
     public struct NFT has key, store {
@@ -10,7 +9,6 @@ module sui_chat_wallet::nft_mint {
         name: String,
         description: String,
         image_url: Url,
-        attributes: Table<String, String>,
         creator: address,
         minted_at: u64,
     }
@@ -36,9 +34,6 @@ module sui_chat_wallet::nft_mint {
         ctx: &mut TxContext
     ) {
         let sender = tx_context::sender(ctx);
-        
-        // Create attributes table
-        let attributes = table::new<String, String>(ctx);
 
         // Create NFT object
         let nft = NFT {
@@ -46,7 +41,6 @@ module sui_chat_wallet::nft_mint {
             name: string::utf8(name),
             description: string::utf8(description),
             image_url: url::new_unsafe_from_bytes(image_url),
-            attributes,
             creator: sender,
             minted_at: tx_context::epoch_timestamp_ms(ctx),
         };
